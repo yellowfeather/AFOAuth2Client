@@ -20,8 +20,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "AFJSONRequestOperation.h"
-
 #import "AFOAuth2Client.h"
 
 NSString * const kAFOAuthCodeGrantType = @"authorization_code";
@@ -72,29 +70,7 @@ static NSMutableDictionary * AFKeychainQueryDictionaryWithIdentifier(NSString *i
     self.clientID = clientID;
     self.secret = secret;
 
-    [self registerHTTPOperationClass:[AFJSONRequestOperation class]];
-
     return self;
-}
-
-#pragma mark -
-
-- (void)setAuthorizationHeaderWithToken:(NSString *)token {
-    // Use the "Bearer" type as an arbitrary default
-    [self setAuthorizationHeaderWithToken:token ofType:@"Bearer"];
-}
-
-- (void)setAuthorizationHeaderWithCredential:(AFOAuthCredential *)credential {
-    [self setAuthorizationHeaderWithToken:credential.accessToken ofType:credential.tokenType];
-}
-
-- (void)setAuthorizationHeaderWithToken:(NSString *)token
-                                 ofType:(NSString *)type
-{
-    // See http://tools.ietf.org/html/rfc6749#section-7.1
-    if ([[type lowercaseString] isEqualToString:@"bearer"]) {
-        [self setDefaultHeader:@"Authorization" value:[NSString stringWithFormat:@"Bearer %@", token]];
-    }
 }
 
 #pragma mark -
@@ -166,48 +142,45 @@ static NSMutableDictionary * AFKeychainQueryDictionaryWithIdentifier(NSString *i
     [mutableParameters setObject:self.clientID forKey:@"client_id"];
     [mutableParameters setValue:self.secret forKey:@"client_secret"];
     parameters = [NSDictionary dictionaryWithDictionary:mutableParameters];
-
-    NSMutableURLRequest *mutableRequest = [self requestWithMethod:@"POST" path:path parameters:parameters];
-    [mutableRequest setValue:@"application/json" forHTTPHeaderField:@"Accept"];
-
-    AFHTTPRequestOperation *requestOperation = [self HTTPRequestOperationWithRequest:mutableRequest success:^(AFHTTPRequestOperation *operation, id responseObject) {
-        if ([responseObject valueForKey:@"error"]) {
-            if (failure) {
-                // TODO: Resolve the `error` field into a proper NSError object
-                // http://tools.ietf.org/html/rfc6749#section-5.2
-                failure(nil);
-            }
-
-            return;
-        }
-
-        NSString *refreshToken = [responseObject valueForKey:@"refresh_token"];
-        if (refreshToken == nil || [refreshToken isEqual:[NSNull null]]) {
-            refreshToken = [parameters valueForKey:@"refresh_token"];
-        }
-
-        AFOAuthCredential *credential = [AFOAuthCredential credentialWithOAuthToken:[responseObject valueForKey:@"access_token"] tokenType:[responseObject valueForKey:@"token_type"]];
-
-        NSDate *expireDate = [NSDate distantFuture];
-        id expiresIn = [responseObject valueForKey:@"expires_in"];
-        if (expiresIn != nil && ![expiresIn isEqual:[NSNull null]]) {
-            expireDate = [NSDate dateWithTimeIntervalSinceNow:[expiresIn doubleValue]];
-        }
-
-        [credential setRefreshToken:refreshToken expiration:expireDate];
-
-        [self setAuthorizationHeaderWithCredential:credential];
-
-        if (success) {
-            success(credential);
-        }
-    } failure:^(AFHTTPRequestOperation *operation, NSError *error) {
-        if (failure) {
-            failure(error);
-        }
-    }];
-
-    [self enqueueHTTPRequestOperation:requestOperation];
+    
+    [self POST:path
+    parameters:parameters
+       success:^(AFHTTPRequestOperation *task, id responseObject)
+     {
+         if ([responseObject valueForKey:@"error"]) {
+             if (failure) {
+                 // TODO: Resolve the `error` field into a proper NSError object
+                 // http://tools.ietf.org/html/rfc6749#section-5.2
+                 failure(nil);
+             }
+             
+             return;
+         }
+         
+         NSString *refreshToken = [responseObject valueForKey:@"refresh_token"];
+         if (refreshToken == nil || [refreshToken isEqual:[NSNull null]]) {
+             refreshToken = [parameters valueForKey:@"refresh_token"];
+         }
+         
+         AFOAuthCredential *credential = [AFOAuthCredential credentialWithOAuthToken:[responseObject valueForKey:@"access_token"] tokenType:[responseObject valueForKey:@"token_type"]];
+         
+         NSDate *expireDate = [NSDate distantFuture];
+         id expiresIn = [responseObject valueForKey:@"expires_in"];
+         if (expiresIn != nil && ![expiresIn isEqual:[NSNull null]]) {
+             expireDate = [NSDate dateWithTimeIntervalSinceNow:[expiresIn doubleValue]];
+         }
+         
+         [credential setRefreshToken:refreshToken expiration:expireDate];
+         
+         if (success) {
+             success(credential);
+         }
+     }
+       failure:^(AFHTTPRequestOperation *task, NSError *error) {
+           if (failure) {
+               failure(error);
+           }
+       }];
 }
 
 @end
@@ -277,7 +250,7 @@ static NSMutableDictionary * AFKeychainQueryDictionaryWithIdentifier(NSString *i
     id securityAccessibility = nil;
 #if (defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 43000) || (defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 1090)
     if( &kSecAttrAccessibleWhenUnlocked != NULL )
-        securityAccessibility = kSecAttrAccessibleWhenUnlocked;
+        securityAccessibility = (__bridge id)(kSecAttrAccessibleWhenUnlocked);
 #endif
     
     return [[self class] storeCredential:credential withIdentifier:identifier withAccessibility:securityAccessibility];
