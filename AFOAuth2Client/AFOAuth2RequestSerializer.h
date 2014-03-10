@@ -25,6 +25,16 @@
 
 @interface AFOAuth2RequestSerializer : AFHTTPRequestSerializer
 
-@property (nonatomic, strong) AFOAuthCredential *credential;
+/**
+ Creates and returns a serializer with default configuration and sets the authorization header with the specified credential.
+ */
++ (AFOAuth2RequestSerializer *)serializerWithCredential:(AFOAuthCredential *)credential;
+
+/**
+ Sets the "Authorization" HTTP header set in request objects made by the HTTP client to the access token of the specified OAuth credential. This overwrites any existing value for this header.
+ 
+ @param credentiai The OAuth credential
+ */
+- (void)setAuthorizationHeaderFieldWithCredential:(AFOAuthCredential *)credential;
 
 @end

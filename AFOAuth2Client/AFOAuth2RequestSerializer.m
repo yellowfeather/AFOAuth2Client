@@ -24,21 +24,15 @@
 
 @implementation AFOAuth2RequestSerializer
 
-- (NSURLRequest *)requestBySerializingRequest:(NSURLRequest *)request
-                               withParameters:(NSDictionary *)parameters
-                                        error:(NSError *__autoreleasing *)error
-{
-    request = [super requestBySerializingRequest:request withParameters:parameters error:error];
++ (AFOAuth2RequestSerializer *)serializerWithCredential:(AFOAuthCredential *)credential {
+    AFOAuth2RequestSerializer *serializer = [super serializer];
+    [serializer setAuthorizationHeaderFieldWithCredential:credential];
+    return serializer;
+}
 
-    if (self.credential) {
-        NSMutableURLRequest *mutableRequest = [request mutableCopy];
-        if ([self.credential.tokenType compare:@"Bearer" options:NSCaseInsensitiveSearch] == NSOrderedSame) {
-            [mutableRequest setValue:[@"Bearer " stringByAppendingString:self.credential.accessToken] forHTTPHeaderField:@"Authorization"];
-        }
-        request = [mutableRequest copy];
-    }
-    
-    return request;
+
+- (void)setAuthorizationHeaderFieldWithCredential:(AFOAuthCredential *)credential {
+    [self setValue:[@"Bearer " stringByAppendingString:credential.accessToken] forHTTPHeaderField:@"Authorization"];
 }
 
 @end
