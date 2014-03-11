@@ -26,10 +26,15 @@
 
 + (AFOAuth2RequestSerializer *)serializerWithCredential:(AFOAuthCredential *)credential {
     AFOAuth2RequestSerializer *serializer = [super serializer];
-    [serializer setAuthorizationHeaderFieldWithCredential:credential];
+    serializer.credential = credential;
     return serializer;
 }
 
+- (void)setCredential:(AFOAuthCredential *)credential
+{
+    _credential = credential;
+    [self setAuthorizationHeaderFieldWithCredential:credential];
+}
 
 - (void)setAuthorizationHeaderFieldWithCredential:(AFOAuthCredential *)credential {
     [self setValue:[@"Bearer " stringByAppendingString:credential.accessToken] forHTTPHeaderField:@"Authorization"];

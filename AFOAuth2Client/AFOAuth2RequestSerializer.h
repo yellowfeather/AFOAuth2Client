@@ -25,6 +25,8 @@
 
 @interface AFOAuth2RequestSerializer : AFHTTPRequestSerializer
 
+@property (nonatomic, strong) AFOAuthCredential *credential;
+
 /**
  Creates and returns a serializer with default configuration and sets the authorization header with the specified credential.
  */
